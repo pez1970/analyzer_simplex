@@ -3,159 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador EDA - SimpleX</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <title>Analizador EDA - Análisis Exploratorio de Datos</title>
+    
+    <!-- Librerías principales - orden específico -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     
-    <!-- Sistema de carga con fallbacks para jsPDF -->
+    <!-- Librerías opcionales -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- Configuración simple post-carga -->
     <script>
-        (function() {
-            const jsPDFSources = [
-                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-                'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
-                'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
-                'https://github.com/parallax/jsPDF/releases/download/v2.5.1/jspdf.umd.min.js'
-            ];
-            
-            const html2canvasSources = [
-                'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-                'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js'
-            ];
-            
-            function loadScript(src) {
-                return new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = src;
-                    script.onload = () => {
-                        console.log(`📥 Script cargado: ${src}`);
-                        resolve(src);
-                    };
-                    script.onerror = () => {
-                        console.warn(`❌ Error cargando: ${src}`);
-                        reject(new Error(`Failed to load ${src}`));
-                    };
-                    document.head.appendChild(script);
-                });
-            }
-            
-            async function loadWithFallback(sources, checkFunction, libraryName) {
-                console.log(`🔄 Intentando cargar ${libraryName}...`);
-                
-                for (let i = 0; i < sources.length; i++) {
-                    const src = sources[i];
-                    console.log(`📡 Intento ${i + 1}/${sources.length} para ${libraryName}: ${src}`);
-                    
-                    try {
-                        await loadScript(src);
-                        // Esperar un momento para que la librería se inicialice
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                        
-                        if (checkFunction()) {
-                            console.log(`✅ ${libraryName} cargado exitosamente desde: ${src}`);
-                            return true;
-                        } else {
-                            console.warn(`⚠️ ${libraryName} se cargó pero no está disponible. Verificando función: ${checkFunction.toString()}`);
-                        }
-                    } catch (error) {
-                        console.warn(`❌ Falló ${libraryName} desde: ${src} - ${error.message}`);
-                        continue;
-                    }
-                }
-                
-                console.error(`❌ No se pudo cargar ${libraryName} desde ningún CDN`);
-                return false;
-            }
-            
-            // Función mejorada para verificar jsPDF
-            function checkJsPDF() {
-                // Buscar jsPDF en múltiples ubicaciones
-                const locations = [
-                    { name: 'window.jsPDF', value: window.jsPDF },
-                    { name: 'window.jspdf', value: window.jspdf },
-                    { name: 'window.JSPDF', value: window.JSPDF },
-                    { name: 'global jsPDF', value: typeof jsPDF !== 'undefined' ? jsPDF : undefined },
-                    { name: 'global jspdf', value: typeof jspdf !== 'undefined' ? jspdf : undefined }
-                ];
-                
-                console.log('🔍 Verificando todas las ubicaciones de jsPDF:');
-                locations.forEach(loc => {
-                    const type = typeof loc.value;
-                    const available = type !== 'undefined';
-                    console.log(`   ${available ? '✅' : '❌'} ${loc.name}: ${type}${available && loc.value?.jsPDF ? ' (con constructor jsPDF)' : ''}`);
-                    
-                    // Si encontramos jsPDF pero no está en window.jsPDF, intentar copiarlo
-                    if (available && !window.jsPDF) {
-                        if (loc.value && (loc.value.jsPDF || typeof loc.value === 'function')) {
-                            console.log(`🔄 Intentando usar ${loc.name} como jsPDF...`);
-                            try {
-                                window.jsPDF = loc.value.jsPDF || loc.value;
-                                console.log(`✅ jsPDF asignado desde ${loc.name}`);
-                            } catch (e) {
-                                console.log(`❌ Error asignando desde ${loc.name}:`, e.message);
-                            }
-                        }
-                    }
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                // Verificar estado de librerías
+                console.log('Librerías cargadas:', {
+                    'Papa Parse': typeof Papa !== 'undefined',
+                    'Chart.js': typeof Chart !== 'undefined',
+                    'Lodash': typeof _ !== 'undefined',
+                    'html2canvas': typeof html2canvas !== 'undefined'
                 });
                 
-                // Verificación final
-                const finalCheck = typeof window.jsPDF !== 'undefined';
-                if (finalCheck) {
-                    console.log('🎉 jsPDF finalmente disponible en window.jsPDF');
-                    
-                    // Verificar que podemos crear una instancia
-                    try {
-                        const testPDF = new window.jsPDF();
-                        console.log('✅ Test de instanciación de jsPDF exitoso');
-                        return true;
-                    } catch (e) {
-                        console.log('❌ Error creando instancia de jsPDF:', e.message);
-                        return false;
-                    }
-                } else {
-                    console.log('❌ jsPDF no disponible en ninguna ubicación');
-                    
-                    // Como último recurso, intentar cargar directamente el código
-                    console.log('🔄 Intentando última alternativa...');
-                    return false;
-                }
-            }
-            
-            // Cargar librerías con fallback
-            Promise.all([
-                loadWithFallback(jsPDFSources, checkJsPDF, 'jsPDF'),
-                loadWithFallback(html2canvasSources, () => typeof html2canvas !== 'undefined', 'html2canvas')
-            ]).then((results) => {
-                const jsPDFStatus = results[0];
-                const html2canvasStatus = results[1];
-                
-                console.log('📋 Resumen de carga de librerías opcionales:');
-                console.log(`   jsPDF: ${jsPDFStatus ? '✅ Disponible' : '❌ No disponible'}`);
-                console.log(`   html2canvas: ${html2canvasStatus ? '✅ Disponible' : '❌ No disponible'}`);
-                
-                if (!jsPDFStatus) {
-                    console.log('');
-                    console.log('🔄 NOTA: jsPDF no está disponible, pero tienes alternativas:');
-                    console.log('   1. 📄 Exportación HTML optimizada para impresión');
-                    console.log('   2. 🖼️ Exportación de gráficos individuales (funciona con html2canvas)');
-                    console.log('   3. 🌐 Reportes HTML que se convierten a PDF con Ctrl+P');
-                    console.log('');
-                }
-                
-                // Disparar evento personalizado cuando terminen de cargar
-                window.dispatchEvent(new CustomEvent('optional-libraries-loaded', { 
-                    detail: { jsPDF: jsPDFStatus, html2canvas: html2canvasStatus } 
-                }));
-            }).catch((error) => {
-                console.error('❌ Error en la carga de librerías opcionales:', error);
-                window.dispatchEvent(new CustomEvent('optional-libraries-loaded'));
-            });
-        })();
+                // Inicializar aplicación
+                initializeApp();
+            }, 300);
+        });
     </script>
+    
     <style>
         * {
             margin: 0;
@@ -251,10 +126,6 @@
             color: #319795;
         }
 
-        .upload-icon {
-            font-size: 2em;
-        }
-
         .file-info {
             margin-top: 15px;
             padding: 15px;
@@ -304,10 +175,6 @@
             background: #edf2f7;
             border-color: #cbd5e0;
             transform: translateY(-1px);
-        }
-
-        .control-button:active {
-            transform: translateY(0);
         }
 
         .column-grid {
@@ -535,7 +402,6 @@
             border-radius: 4px;
         }
 
-        /* Estilos para gráficas personalizadas */
         .custom-chart-builder {
             display: grid;
             grid-template-columns: 1fr 2fr;
@@ -654,13 +520,6 @@
             color: white;
         }
 
-        .chart-info {
-            font-size: 0.9em;
-            color: #718096;
-            margin-bottom: 15px;
-        }
-
-        /* Estilos para exportación */
         .export-section {
             max-width: 1000px;
             margin: 0 auto;
@@ -745,15 +604,6 @@
             box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
         }
 
-        .export-button.secondary {
-            background: linear-gradient(135deg, #f7901e, #f56500);
-            box-shadow: 0 3px 12px rgba(247, 144, 30, 0.3);
-        }
-
-        .export-button.secondary:hover {
-            box-shadow: 0 6px 20px rgba(247, 144, 30, 0.4);
-        }
-
         .report-options {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -820,28 +670,6 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .individual-charts {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .chart-export-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: white;
-            border-radius: 6px;
-            border: 1px solid #e2e8f0;
-            margin-bottom: 8px;
-        }
-
-        .chart-export-name {
-            font-weight: 500;
-            color: #2d3748;
-        }
-
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -890,27 +718,9 @@
                 grid-template-columns: 1fr;
             }
 
-            .selection-controls {
-                justify-content: center;
-            }
-
-            .control-button {
-                flex: 1;
-                min-width: 120px;
-                text-align: center;
-            }
-
             .custom-chart-builder {
                 grid-template-columns: 1fr;
                 gap: 20px;
-            }
-
-            .chart-controls {
-                order: 1;
-            }
-
-            .custom-charts-display {
-                order: 2;
             }
 
             .tab-buttons {
@@ -936,10 +746,6 @@
             .report-options {
                 grid-template-columns: 1fr;
             }
-
-            .config-group {
-                margin-bottom: 15px;
-            }
         }
     </style>
 </head>
@@ -948,21 +754,21 @@
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <h3 id="loadingTitle">Generando reporte...</h3>
-            <p id="loadingMessage">Por favor, espera mientras procesamos tu análisis</p>
+            <h3 id="loadingTitle">Procesando análisis...</h3>
+            <p id="loadingMessage">Por favor, espera mientras procesamos los datos</p>
         </div>
     </div>
 
     <div class="container">
         <header>
-            <h1>🔍 Analizador EDA-SimpleX</h1>
+            <h1>Analizador EDA</h1>
             <p class="subtitle">Análisis Exploratorio de Datos para archivos CSV</p>
         </header>
 
         <div class="error-message" id="errorMessage"></div>
 
         <section class="upload-section">
-            <h2>📁 Cargar archivo CSV</h2>
+            <h2>Cargar archivo CSV</h2>
             <p style="margin-bottom: 20px; color: #4a5568;">
                 Sube tu archivo CSV (máximo 20MB). Debe tener encabezados en la primera fila, separación por comas y codificación UTF-8.
             </p>
@@ -980,11 +786,11 @@
 
         <section class="analysis-section" id="analysisSection">
             <div class="column-selector">
-                <h3>📊 Selecciona las columnas a analizar</h3>
+                <h3>Selecciona las columnas a analizar</h3>
                 <div class="selection-controls" style="margin-bottom: 15px;">
-                    <button class="control-button" id="selectAllButton">✅ Seleccionar todas</button>
-                    <button class="control-button" id="deselectAllButton">❌ Deseleccionar todas</button>
-                    <button class="control-button" id="selectNumericButton">🔢 Solo numéricas</button>
+                    <button class="control-button" id="selectAllButton">Seleccionar todas</button>
+                    <button class="control-button" id="deselectAllButton">Deseleccionar todas</button>
+                    <button class="control-button" id="selectNumericButton">Solo numéricas</button>
                 </div>
                 <div class="column-grid" id="columnGrid"></div>
                 <button class="analyze-button" id="analyzeButton" disabled>
@@ -996,13 +802,13 @@
         <section class="results-section" id="resultsSection">
             <div class="tab-container">
                 <div class="tab-buttons">
-                    <button class="tab-button active" data-tab="overview">📋 Resumen</button>
-                    <button class="tab-button" data-tab="statistics">📈 Estadísticas</button>
-                    <button class="tab-button" data-tab="visualizations">📊 Visualizaciones</button>
-                    <button class="tab-button" data-tab="custom-charts">🎨 Gráficas</button>
-                    <button class="tab-button" data-tab="correlations">🔗 Correlaciones</button>
-                    <button class="tab-button" data-tab="quality">🔍 Calidad</button>
-                    <button class="tab-button" data-tab="export">📄 Exportar</button>
+                    <button class="tab-button active" data-tab="overview">Resumen</button>
+                    <button class="tab-button" data-tab="statistics">Estadísticas</button>
+                    <button class="tab-button" data-tab="visualizations">Visualizaciones</button>
+                    <button class="tab-button" data-tab="custom-charts">Gráficas</button>
+                    <button class="tab-button" data-tab="correlations">Correlaciones</button>
+                    <button class="tab-button" data-tab="quality">Calidad</button>
+                    <button class="tab-button" data-tab="export">Exportar</button>
                 </div>
 
                 <div class="tab-content active" id="overview">
@@ -1016,59 +822,59 @@
                 </div>
 
                 <div class="tab-content" id="visualizations">
-                    <h3>Visualizaciones</h3>
+                    <h3>Visualizaciones Automáticas</h3>
                     <div id="visualizationsContent"></div>
                 </div>
 
                 <div class="tab-content" id="custom-charts">
-                    <h3>🎨 Crear Gráficas Personalizadas</h3>
+                    <h3>Crear Gráficas Personalizadas</h3>
                     <div class="custom-chart-builder">
                         <div class="chart-controls">
                             <div class="control-group">
-                                <label for="chartType"><strong>📊 Tipo de Gráfica:</strong></label>
+                                <label for="chartType"><strong>Tipo de Gráfica:</strong></label>
                                 <select id="chartType" class="chart-select">
-                                    <option value="scatter">🔵 Scatter Plot (Dispersión)</option>
-                                    <option value="histogram">📊 Histograma</option>
-                                    <option value="pie">🥧 Gráfico de Pie</option>
-                                    <option value="bar">📈 Gráfico de Barras</option>
-                                    <option value="line">📉 Gráfico de Líneas</option>
+                                    <option value="scatter">Scatter Plot (Dispersión)</option>
+                                    <option value="histogram">Histograma</option>
+                                    <option value="pie">Gráfico de Pie</option>
+                                    <option value="bar">Gráfico de Barras</option>
+                                    <option value="line">Gráfico de Líneas</option>
                                 </select>
                             </div>
 
                             <div class="control-group" id="xAxisGroup">
-                                <label for="xAxisVariable"><strong>📐 Variable X (Eje Horizontal):</strong></label>
+                                <label for="xAxisVariable"><strong>Variable X:</strong></label>
                                 <select id="xAxisVariable" class="chart-select">
                                     <option value="">Selecciona una variable...</option>
                                 </select>
                             </div>
 
                             <div class="control-group" id="yAxisGroup">
-                                <label for="yAxisVariable"><strong>📏 Variable Y (Eje Vertical):</strong></label>
+                                <label for="yAxisVariable"><strong>Variable Y:</strong></label>
                                 <select id="yAxisVariable" class="chart-select">
                                     <option value="">Selecciona una variable...</option>
                                 </select>
                             </div>
 
                             <div class="control-group" id="categoryGroup" style="display: none;">
-                                <label for="categoryVariable"><strong>🏷️ Variable de Categoría:</strong></label>
+                                <label for="categoryVariable"><strong>Variable de Categoría:</strong></label>
                                 <select id="categoryVariable" class="chart-select">
                                     <option value="">Selecciona una variable...</option>
                                 </select>
                             </div>
 
                             <div class="control-group">
-                                <label for="chartTitle"><strong>📝 Título de la Gráfica:</strong></label>
+                                <label for="chartTitle"><strong>Título de la Gráfica:</strong></label>
                                 <input type="text" id="chartTitle" class="chart-input" placeholder="Mi gráfica personalizada" />
                             </div>
 
                             <button class="create-chart-button" id="createCustomChart">
-                                ✨ Crear Gráfica
+                                Crear Gráfica Personalizada
                             </button>
                         </div>
 
                         <div id="customChartsContainer" class="custom-charts-display">
                             <div class="no-charts-message">
-                                <p>🎯 Crea tu primera gráfica personalizada seleccionando el tipo y las variables!</p>
+                                <p>Crea tu primera gráfica personalizada seleccionando el tipo y las variables</p>
                             </div>
                         </div>
                     </div>
@@ -1085,106 +891,101 @@
                 </div>
 
                 <div class="tab-content" id="export">
-                    <h3>📄 Exportar Análisis</h3>
+                    <h3>Exportar Análisis</h3>
                     <div class="export-section">
                         <div class="export-options">
                             <div class="export-card">
                                 <div class="export-card-header">
-                                    <h4>📊 Exportar Datos</h4>
+                                    <h4>Exportar Datos</h4>
                                     <p>Descarga los datos analizados en diferentes formatos</p>
                                 </div>
                                 <div class="export-buttons">
                                     <button class="export-button" id="exportFilteredCSV">
-                                        💾 Datos Filtrados (CSV)
+                                        Datos Filtrados (CSV)
                                     </button>
                                     <button class="export-button" id="exportStatistics">
-                                        📈 Estadísticas (CSV)
-                                    </button>
-                                    <button class="export-button" id="exportCorrelations">
-                                        🔗 Correlaciones (CSV)
+                                        Estadísticas (CSV)
                                     </button>
                                 </div>
                             </div>
 
                             <div class="export-card">
                                 <div class="export-card-header">
-                                    <h4>🖼️ Exportar Gráficos</h4>
+                                    <h4>Exportar Gráficos</h4>
                                     <p>Descarga visualizaciones individuales</p>
                                 </div>
                                 <div class="export-buttons">
                                     <button class="export-button" id="exportAllCharts">
-                                        🎨 Todos los Gráficos (ZIP)
+                                        Todos los Gráficos (PNG)
                                     </button>
-                                    <button class="export-button" id="exportCustomCharts">
-                                        ✨ Gráficos Personalizados (ZIP)
-                                    </button>
-                                </div>
-                                <div class="individual-charts" id="individualChartsExport">
-                                    <p><em>Los gráficos individuales aparecerán aquí después del análisis</em></p>
                                 </div>
                             </div>
 
                             <div class="export-card featured">
                                 <div class="export-card-header">
-                                    <h4>📋 Generar Reporte Completo</h4>
+                                    <h4>📄 Generar Reporte Completo</h4>
                                     <p>Crea un reporte profesional con todos los análisis</p>
                                 </div>
                                 <div class="report-options">
                                     <label class="checkbox-option">
                                         <input type="checkbox" id="includeOverview" checked>
-                                        <span>📊 Incluir Resumen General</span>
+                                        <span>Incluir Resumen General</span>
                                     </label>
                                     <label class="checkbox-option">
                                         <input type="checkbox" id="includeStatistics" checked>
-                                        <span>📈 Incluir Estadísticas Descriptivas</span>
+                                        <span>Incluir Estadísticas Descriptivas</span>
                                     </label>
                                     <label class="checkbox-option">
                                         <input type="checkbox" id="includeVisualizations" checked>
-                                        <span>📊 Incluir Visualizaciones Automáticas</span>
+                                        <span>Incluir Visualizaciones Automáticas</span>
                                     </label>
                                     <label class="checkbox-option">
                                         <input type="checkbox" id="includeCustomCharts" checked>
-                                        <span>🎨 Incluir Gráficos Personalizados</span>
+                                        <span>Incluir Gráficos Personalizados</span>
                                     </label>
                                     <label class="checkbox-option">
                                         <input type="checkbox" id="includeCorrelations" checked>
-                                        <span>🔗 Incluir Matrix de Correlaciones</span>
+                                        <span>Incluir Matrix de Correlaciones</span>
                                     </label>
                                     <label class="checkbox-option">
                                         <input type="checkbox" id="includeQuality" checked>
-                                        <span>🔍 Incluir Análisis de Calidad</span>
+                                        <span>Incluir Análisis de Calidad</span>
                                     </label>
+                                </div>
+                                <div class="config-options">
+                                    <div class="config-group">
+                                        <label for="reportTitle">Título del Reporte:</label>
+                                        <input type="text" id="reportTitle" class="config-input" placeholder="Análisis EDA - Mi Dataset" />
+                                    </div>
+                                    <div class="config-group">
+                                        <label for="authorName">Autor:</label>
+                                        <input type="text" id="authorName" class="config-input" placeholder="Tu nombre" />
+                                    </div>
                                 </div>
                                 <div class="export-buttons">
                                     <button class="export-button primary" id="generateHTMLReport">
                                         🌐 Generar Reporte HTML
                                     </button>
-                                    <button class="export-button primary" id="generatePDFReport">
-                                        📑 Generar Reporte PDF
-                                    </button>
                                 </div>
                             </div>
 
-                            <div class="export-card">
+                            <div class="export-card" style="background: linear-gradient(135deg, #e6f7ff, #f0f9ff); border: 2px solid #1890ff;">
                                 <div class="export-card-header">
-                                    <h4>⚙️ Configuración Avanzada</h4>
-                                    <p>Personaliza tus exportaciones</p>
+                                    <h4>📱 ¿Necesitas un PDF?</h4>
+                                    <p>Convierte fácilmente el reporte HTML a PDF</p>
                                 </div>
-                                <div class="config-options">
-                                    <div class="config-group">
-                                        <label for="reportTitle">📝 Título del Reporte:</label>
-                                        <input type="text" id="reportTitle" class="config-input" placeholder="Análisis EDA - Mi Dataset" />
-                                    </div>
-                                    <div class="config-group">
-                                        <label for="authorName">👤 Autor:</label>
-                                        <input type="text" id="authorName" class="config-input" placeholder="Tu nombre" />
-                                    </div>
-                                    <div class="config-group">
-                                        <label for="imageQuality">🖼️ Calidad de Imágenes:</label>
-                                        <select id="imageQuality" class="config-select">
-                                            <option value="0.8">Alta (0.8)</option>
-                                            <option value="1.0" selected>Máxima (1.0)</option>
-                                        </select>
+                                <div style="background: white; padding: 20px; border-radius: 8px; margin: 15px 0;">
+                                    <h5 style="margin-bottom: 15px; color: #1890ff;">Instrucciones simples:</h5>
+                                    <ol style="margin: 0; padding-left: 20px; color: #2d3748; line-height: 1.6;">
+                                        <li><strong>Genera el reporte HTML</strong> usando el botón de arriba</li>
+                                        <li><strong>Abre el archivo</strong> en tu navegador (Chrome, Firefox, Edge, Safari)</li>
+                                        <li><strong>Presiona Ctrl+P</strong> (o Cmd+P en Mac) para abrir las opciones de impresión</li>
+                                        <li><strong>Selecciona "Guardar como PDF"</strong> en lugar de impresora</li>
+                                        <li><strong>Ajusta márgenes</strong> a "Mínimo" para mejor formato</li>
+                                        <li><strong>Haz clic en "Guardar"</strong> y elige la ubicación</li>
+                                    </ol>
+                                    <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-top: 15px; border-left: 4px solid #1890ff;">
+                                        <strong>✨ Resultado:</strong> PDF profesional idéntico al reporte, con gráficos de alta calidad y formato perfecto.
                                     </div>
                                 </div>
                             </div>
@@ -1196,258 +997,106 @@
     </div>
 
     <script>
-        // Verificar que todas las librerías estén cargadas
-        document.addEventListener('DOMContentLoaded', function() {
-            // Función para verificar carga de librerías con reintentos
-            function checkLibrariesAndInit(retries = 5) {
-                const libraries = [
-                    { name: 'PapaParse', check: () => typeof Papa !== 'undefined', required: true },
-                    { name: 'Chart.js', check: () => typeof Chart !== 'undefined', required: true },
-                    { name: 'Lodash', check: () => typeof _ !== 'undefined', required: true },
-                    { name: 'jsPDF', check: () => typeof window.jsPDF !== 'undefined', required: false },
-                    { name: 'html2canvas', check: () => typeof html2canvas !== 'undefined', required: false }
-                ];
-
-                const missingRequired = libraries.filter(lib => lib.required && !lib.check());
-                const missingOptional = libraries.filter(lib => !lib.required && !lib.check());
-
-                if (missingRequired.length > 0) {
-                    if (retries > 0) {
-                        console.log(`Esperando librerías requeridas... Reintentos: ${retries}`);
-                        setTimeout(() => checkLibrariesAndInit(retries - 1), 1000);
-                        return;
-                    } else {
-                        const errorMsg = `Error: Librerías requeridas no disponibles: ${missingRequired.map(l => l.name).join(', ')}`;
-                        console.error(errorMsg);
-                        document.body.innerHTML = `
-                            <div style="text-align: center; padding: 50px; color: red;">
-                                <h2>${errorMsg}</h2>
-                                <p>Por favor, recarga la página o verifica tu conexión a internet</p>
-                                <button onclick="location.reload()" style="padding: 10px 20px; font-size: 16px; margin-top: 20px;">
-                                    Recargar Página
-                                </button>
-                            </div>
-                        `;
-                        return;
-                    }
-                }
-
-                // Mostrar advertencias para librerías opcionales faltantes
-                if (missingOptional.length > 0) {
-                    const warnings = missingOptional.map(lib => {
-                        if (lib.name === 'jsPDF') {
-                            return 'jsPDF no está disponible - la exportación a PDF estará limitada';
-                        } else if (lib.name === 'html2canvas') {
-                            return 'html2canvas no está disponible - algunas funciones avanzadas pueden no funcionar';
-                        }
-                        return `${lib.name} no está disponible`;
-                    });
-                    
-                    warnings.forEach(warning => console.warn(warning));
-                }
-
-                // Todas las librerías requeridas están disponibles
-                console.log('✅ Todas las librerías requeridas cargadas correctamente');
-                
-                // Mostrar estado de librerías opcionales
-                const optionalLoaded = libraries.filter(lib => !lib.required && lib.check());
-                if (optionalLoaded.length > 0) {
-                    console.log(`✅ Librerías opcionales cargadas: ${optionalLoaded.map(l => l.name).join(', ')}`);
-                }
-                
-                // Inicializar aplicación
-                initializeApp();
-
-                // Si faltan librerías opcionales, mostrar notificación
-                if (missingOptional.some(lib => lib.name === 'jsPDF')) {
-                    showOptionalLibraryNotification();
-                }
-            }
-
-            // Escuchar evento de librerías opcionales cargadas
-            window.addEventListener('optional-libraries-loaded', function() {
-                console.log('🔄 Librerías opcionales terminaron de cargar, verificando nuevamente...');
-                setTimeout(() => {
-                    // Re-verificar y actualizar interfaz si es necesario
-                    const jsPDFNowAvailable = typeof window.jsPDF !== 'undefined';
-                    const html2canvasNowAvailable = typeof html2canvas !== 'undefined';
-                    
-                    if (jsPDFNowAvailable) {
-                        console.log('✅ jsPDF ahora disponible');
-                        // Actualizar botón PDF si ya se inicializó la app
-                        const pdfButton = document.getElementById('generatePDFReport');
-                        if (pdfButton) {
-                            pdfButton.disabled = false;
-                            pdfButton.style.opacity = '1';
-                            pdfButton.innerHTML = '📑 Generar Reporte PDF';
-                            pdfButton.title = 'Generar un reporte PDF profesional con gráficos integrados';
-                            
-                            // Remover advertencia si existe
-                            const warning = document.querySelector('.pdf-warning');
-                            if (warning) warning.remove();
-                            
-                            // Remover notificación si existe
-                            const notification = document.querySelector('.optional-library-notification');
-                            if (notification) notification.remove();
-                        }
-                    }
-                    
-                    if (html2canvasNowAvailable) {
-                        console.log('✅ html2canvas ahora disponible');
-                    }
-                }, 200);
-            });
-
-            // Iniciar verificación
-            checkLibrariesAndInit();
-        });
-
-        function showOptionalLibraryNotification() {
-            setTimeout(() => {
-                // Verificar si ya se cargó mientras tanto
-                if (typeof window.jsPDF !== 'undefined') return;
-                
-                const notification = document.createElement('div');
-                notification.className = 'optional-library-notification';
-                notification.style.cssText = `
-                    position: fixed; top: 10px; right: 10px; z-index: 10000;
-                    background: #fed7d7; color: #c53030; padding: 15px 20px;
-                    border-radius: 8px; border: 1px solid #fc8181;
-                    max-width: 350px; font-family: inherit;
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                    animation: slideIn 0.3s ease-out;
-                `;
-                
-                notification.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <strong>⚠️ Librerías PDF no disponibles</strong><br>
-                            <small>Intentando cargar desde CDNs alternativos...</small><br>
-                            <em>Alternativa: Exportación HTML → Imprimir como PDF</em>
-                        </div>
-                        <button onclick="this.parentElement.parentElement.remove()" 
-                                style="background: none; border: none; color: #c53030; font-size: 18px; cursor: pointer; margin-left: 10px;">×</button>
-                    </div>
-                `;
-                
-                // Agregar animación CSS
-                const style = document.createElement('style');
-                style.textContent = `
-                    @keyframes slideIn {
-                        from { transform: translateX(100%); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                `;
-                document.head.appendChild(style);
-                
-                document.body.appendChild(notification);
-                
-                // Auto-remover después de 10 segundos
-                setTimeout(() => {
-                    if (notification.parentElement) {
-                        notification.style.animation = 'slideIn 0.3s ease-out reverse';
-                        setTimeout(() => notification.remove(), 300);
-                    }
-                }, 10000);
-            }, 2000);
-        }
-
+        // Variables globales optimizadas
         let csvData = null;
         let selectedColumns = [];
         let dataTypes = {};
         let customChartCounter = 0;
         let analysisData = null;
-
-        // Elementos del DOM
-        const csvFileInput = document.getElementById('csvFile');
-        const fileInputButton = document.getElementById('fileInputButton');
-        const fileInfo = document.getElementById('fileInfo');
-        const analysisSection = document.getElementById('analysisSection');
-        const columnGrid = document.getElementById('columnGrid');
-        const analyzeButton = document.getElementById('analyzeButton');
-        const selectAllButton = document.getElementById('selectAllButton');
-        const deselectAllButton = document.getElementById('deselectAllButton');
-        const selectNumericButton = document.getElementById('selectNumericButton');
-        const resultsSection = document.getElementById('resultsSection');
-        const errorMessage = document.getElementById('errorMessage');
-
-        // Elementos para gráficas personalizadas
-        const chartType = document.getElementById('chartType');
-        const xAxisVariable = document.getElementById('xAxisVariable');
-        const yAxisVariable = document.getElementById('yAxisVariable');
-        const categoryVariable = document.getElementById('categoryVariable');
-        const chartTitle = document.getElementById('chartTitle');
-        const createCustomChart = document.getElementById('createCustomChart');
-        const customChartsContainer = document.getElementById('customChartsContainer');
-
-        // Elementos para exportación
-        const exportFilteredCSV = document.getElementById('exportFilteredCSV');
-        const exportStatistics = document.getElementById('exportStatistics');
-        const exportCorrelations = document.getElementById('exportCorrelations');
-        const exportAllCharts = document.getElementById('exportAllCharts');
-        const exportCustomCharts = document.getElementById('exportCustomCharts');
-        const generateHTMLReport = document.getElementById('generateHTMLReport');
-        const generatePDFReport = document.getElementById('generatePDFReport');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        const individualChartsExport = document.getElementById('individualChartsExport');
+        
+        // Cache de elementos DOM para mejor rendimiento
+        const DOM = {
+            csvFileInput: null,
+            fileInputButton: null,
+            fileInfo: null,
+            analysisSection: null,
+            columnGrid: null,
+            analyzeButton: null,
+            resultsSection: null,
+            errorMessage: null,
+            loadingOverlay: null,
+            init() {
+                this.csvFileInput = document.getElementById('csvFile');
+                this.fileInputButton = document.getElementById('fileInputButton');
+                this.fileInfo = document.getElementById('fileInfo');
+                this.analysisSection = document.getElementById('analysisSection');
+                this.columnGrid = document.getElementById('columnGrid');
+                this.analyzeButton = document.getElementById('analyzeButton');
+                this.resultsSection = document.getElementById('resultsSection');
+                this.errorMessage = document.getElementById('errorMessage');
+                this.loadingOverlay = document.getElementById('loadingOverlay');
+            }
+        };
 
         function initializeApp() {
-            // Event listeners
-            csvFileInput.addEventListener('change', handleFileSelect);
-            analyzeButton.addEventListener('click', performAnalysis);
-            selectAllButton.addEventListener('click', selectAllColumns);
-            deselectAllButton.addEventListener('click', deselectAllColumns);
-            selectNumericButton.addEventListener('click', selectNumericColumns);
+            DOM.init();
+            setupEventListeners();
+        }
 
-            // Event listeners para gráficas personalizadas
-            chartType.addEventListener('change', updateChartControls);
-            createCustomChart.addEventListener('click', createCustomChartFunction);
+        function setupEventListeners() {
+            // Archivo CSV
+            DOM.csvFileInput.addEventListener('change', handleFileSelect);
+            DOM.analyzeButton.addEventListener('click', performAnalysis);
 
-            // Event listeners para exportación
-            exportFilteredCSV.addEventListener('click', () => exportData('filtered'));
-            exportStatistics.addEventListener('click', () => exportData('statistics'));
-            exportCorrelations.addEventListener('click', () => exportData('correlations'));
-            exportAllCharts.addEventListener('click', () => exportCharts('all'));
-            exportCustomCharts.addEventListener('click', () => exportCharts('custom'));
-            generateHTMLReport.addEventListener('click', () => generateReport('html'));
-            generatePDFReport.addEventListener('click', () => generateReport('pdf'));
+            // Controles de columnas
+            document.getElementById('selectAllButton').addEventListener('click', selectAllColumns);
+            document.getElementById('deselectAllButton').addEventListener('click', deselectAllColumns);
+            document.getElementById('selectNumericButton').addEventListener('click', selectNumericColumns);
+
+            // Gráficas personalizadas
+            document.getElementById('chartType').addEventListener('change', updateChartControls);
+            document.getElementById('createCustomChart').addEventListener('click', createCustomChartFunction);
+
+            // Exportación
+            document.getElementById('exportFilteredCSV').addEventListener('click', () => exportData('filtered'));
+            document.getElementById('exportStatistics').addEventListener('click', () => exportData('statistics'));
+            document.getElementById('exportAllCharts').addEventListener('click', () => exportCharts('all'));
+            document.getElementById('generateHTMLReport').addEventListener('click', () => generateReport('html'));
 
             // Drag and drop
-            fileInputButton.addEventListener('dragover', (e) => {
+            setupDragAndDrop();
+
+            // Tabs
+            setupTabs();
+        }
+
+        function setupDragAndDrop() {
+            DOM.fileInputButton.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                fileInputButton.classList.add('dragover');
+                DOM.fileInputButton.classList.add('dragover');
             });
 
-            fileInputButton.addEventListener('dragleave', () => {
-                fileInputButton.classList.remove('dragover');
+            DOM.fileInputButton.addEventListener('dragleave', () => {
+                DOM.fileInputButton.classList.remove('dragover');
             });
 
-            fileInputButton.addEventListener('drop', (e) => {
+            DOM.fileInputButton.addEventListener('drop', (e) => {
                 e.preventDefault();
-                fileInputButton.classList.remove('dragover');
+                DOM.fileInputButton.classList.remove('dragover');
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
-                    csvFileInput.files = files;
+                    DOM.csvFileInput.files = files;
                     handleFileSelect();
                 }
             });
+        }
 
-            // Tabs
+        function setupTabs() {
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.addEventListener('click', () => switchTab(button.dataset.tab));
             });
         }
 
         function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
+            DOM.errorMessage.textContent = message;
+            DOM.errorMessage.style.display = 'block';
             setTimeout(() => {
-                errorMessage.style.display = 'none';
+                DOM.errorMessage.style.display = 'none';
             }, 5000);
         }
 
-        function showLoading(show, title = 'Generando reporte...', message = 'Por favor, espera mientras procesamos tu análisis') {
-            loadingOverlay.style.display = show ? 'flex' : 'none';
+        function showLoading(show, title = 'Procesando...', message = 'Por favor, espera') {
+            DOM.loadingOverlay.style.display = show ? 'flex' : 'none';
             if (show) {
                 document.getElementById('loadingTitle').textContent = title;
                 document.getElementById('loadingMessage').textContent = message;
@@ -1455,11 +1104,10 @@
         }
 
         function handleFileSelect() {
-            const file = csvFileInput.files[0];
+            const file = DOM.csvFileInput.files[0];
             if (!file) return;
 
-            // Validaciones
-            if (file.size > 20 * 1024 * 1024) { // 20MB
+            if (file.size > 20 * 1024 * 1024) {
                 showError('El archivo es demasiado grande. El límite es de 20MB.');
                 return;
             }
@@ -1469,15 +1117,13 @@
                 return;
             }
 
-            // Mostrar información del archivo
-            fileInfo.innerHTML = `
-                <strong>📄 Archivo seleccionado:</strong> ${file.name}<br>
-                <strong>📏 Tamaño:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
-                <strong>🕒 Última modificación:</strong> ${new Date(file.lastModified).toLocaleString('es-ES')}
+            DOM.fileInfo.innerHTML = `
+                <strong>Archivo seleccionado:</strong> ${file.name}<br>
+                <strong>Tamaño:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                <strong>Última modificación:</strong> ${new Date(file.lastModified).toLocaleString('es-ES')}
             `;
-            fileInfo.style.display = 'block';
+            DOM.fileInfo.style.display = 'block';
 
-            // Leer y parsear el archivo
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -1495,7 +1141,7 @@
 
                     csvData = results.data;
                     setupColumnSelector();
-                    analysisSection.style.display = 'block';
+                    DOM.analysisSection.style.display = 'block';
                     
                 } catch (error) {
                     showError('Error al leer el archivo: ' + error.message);
@@ -1509,22 +1155,10 @@
             if (!csvData || csvData.length === 0) return;
 
             const headers = Object.keys(csvData[0]);
-            columnGrid.innerHTML = '';
+            DOM.columnGrid.innerHTML = '';
 
-            // Detectar tipos de datos
-            dataTypes = {};
-            headers.forEach(header => {
-                const sample = csvData.slice(0, 100).map(row => row[header]).filter(val => val !== null && val !== undefined && val !== '');
-                if (sample.length === 0) {
-                    dataTypes[header] = 'empty';
-                } else if (sample.every(val => !isNaN(val) && isFinite(val))) {
-                    dataTypes[header] = 'numeric';
-                } else if (sample.every(val => !isNaN(Date.parse(val)))) {
-                    dataTypes[header] = 'datetime';
-                } else {
-                    dataTypes[header] = 'categorical';
-                }
-            });
+            // Detección mejorada de tipos de datos
+            dataTypes = detectDataTypes(headers);
 
             headers.forEach((header, index) => {
                 const columnItem = document.createElement('div');
@@ -1534,7 +1168,7 @@
                 checkbox.type = 'checkbox';
                 checkbox.id = `col-${index}`;
                 checkbox.value = header;
-                checkbox.checked = dataTypes[header] === 'numeric'; // Seleccionar numéricas por defecto
+                checkbox.checked = dataTypes[header] === 'numeric';
                 
                 const label = document.createElement('label');
                 label.htmlFor = `col-${index}`;
@@ -1544,16 +1178,50 @@
                 
                 columnItem.appendChild(checkbox);
                 columnItem.appendChild(label);
-                columnGrid.appendChild(columnItem);
+                DOM.columnGrid.appendChild(columnItem);
             });
 
             updateSelectedColumns();
         }
 
+        function detectDataTypes(headers) {
+            const types = {};
+            const sampleSize = Math.min(100, csvData.length);
+            
+            headers.forEach(header => {
+                const sample = csvData.slice(0, sampleSize)
+                    .map(row => row[header])
+                    .filter(val => val !== null && val !== undefined && val !== '');
+                
+                if (sample.length === 0) {
+                    types[header] = 'empty';
+                    return;
+                }
+                
+                // Verificar numérico
+                const numericCount = sample.filter(val => !isNaN(val) && isFinite(val)).length;
+                if (numericCount / sample.length > 0.8) {
+                    types[header] = 'numeric';
+                    return;
+                }
+                
+                // Verificar fechas
+                const dateCount = sample.filter(val => !isNaN(Date.parse(val))).length;
+                if (dateCount / sample.length > 0.8) {
+                    types[header] = 'datetime';
+                    return;
+                }
+                
+                types[header] = 'categorical';
+            });
+            
+            return types;
+        }
+
         function updateSelectedColumns() {
             selectedColumns = Array.from(document.querySelectorAll('.column-item input[type="checkbox"]:checked'))
                 .map(cb => cb.value);
-            analyzeButton.disabled = selectedColumns.length === 0;
+            DOM.analyzeButton.disabled = selectedColumns.length === 0;
         }
 
         function selectAllColumns() {
@@ -1584,38 +1252,42 @@
                 return;
             }
 
-            resultsSection.style.display = 'block';
-            resultsSection.scrollIntoView({ behavior: 'smooth' });
+            showLoading(true, 'Analizando datos...', 'Procesando columnas seleccionadas');
 
-            // Filtrar datos por columnas seleccionadas
-            const filteredData = csvData.map(row => {
-                const filteredRow = {};
-                selectedColumns.forEach(col => {
-                    filteredRow[col] = row[col];
-                });
-                return filteredRow;
-            });
+            DOM.resultsSection.style.display = 'block';
+            DOM.resultsSection.scrollIntoView({ behavior: 'smooth' });
 
-            // Generar análisis
-            generateOverview(filteredData);
-            generateStatistics(filteredData);
-            generateVisualizations(filteredData);
-            generateCorrelations(filteredData);
-            generateQualityAnalysis(filteredData);
-            
-            // Poblar las variables para gráficas personalizadas
-            populateCustomChartVariables();
-            
-            // Almacenar datos para exportación
-            analysisData = {
-                original: csvData,
-                filtered: filteredData,
-                columns: selectedColumns,
-                types: dataTypes
-            };
-            
-            // Preparar opciones de exportación
-            prepareExportOptions();
+            setTimeout(() => {
+                try {
+                    const filteredData = csvData.map(row => {
+                        const filteredRow = {};
+                        selectedColumns.forEach(col => {
+                            filteredRow[col] = row[col];
+                        });
+                        return filteredRow;
+                    });
+
+                    generateOverview(filteredData);
+                    generateStatistics(filteredData);
+                    generateVisualizations(filteredData);
+                    generateCorrelations(filteredData);
+                    generateQualityAnalysis(filteredData);
+                    
+                    populateCustomChartVariables();
+                    
+                    analysisData = {
+                        original: csvData,
+                        filtered: filteredData,
+                        columns: selectedColumns,
+                        types: dataTypes
+                    };
+                    
+                    showLoading(false);
+                } catch (error) {
+                    showLoading(false);
+                    showError('Error durante el análisis: ' + error.message);
+                }
+            }, 500);
         }
 
         function generateOverview(data) {
@@ -1627,13 +1299,13 @@
             let memoryUsage = 0;
             selectedColumns.forEach(col => {
                 const values = data.map(row => row[col]).filter(val => val !== null && val !== undefined);
-                memoryUsage += values.length * (dataTypes[col] === 'numeric' ? 8 : 50); // Estimación
+                memoryUsage += values.length * (dataTypes[col] === 'numeric' ? 8 : 50);
             });
 
             document.getElementById('overviewContent').innerHTML = `
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <h4>📊 Información General</h4>
+                        <h4>Información General</h4>
                         <div class="stat-item"><span class="stat-label">Total de filas:</span><span class="stat-value">${totalRows.toLocaleString()}</span></div>
                         <div class="stat-item"><span class="stat-label">Total de columnas analizadas:</span><span class="stat-value">${totalColumns}</span></div>
                         <div class="stat-item"><span class="stat-label">Columnas numéricas:</span><span class="stat-value">${numericColumns}</span></div>
@@ -1657,18 +1329,7 @@
                     if (dataTypes[column] === 'numeric') {
                         const numericValues = values.map(Number).filter(val => !isNaN(val));
                         if (numericValues.length > 0) {
-                            const sorted = numericValues.sort((a, b) => a - b);
-                            const stats = {
-                                count: numericValues.length,
-                                mean: _.mean(numericValues),
-                                median: sorted[Math.floor(sorted.length / 2)],
-                                std: Math.sqrt(_.mean(numericValues.map(x => Math.pow(x - _.mean(numericValues), 2)))),
-                                min: _.min(numericValues),
-                                max: _.max(numericValues),
-                                q1: sorted[Math.floor(sorted.length * 0.25)],
-                                q3: sorted[Math.floor(sorted.length * 0.75)]
-                            };
-
+                            const stats = calculateNumericStats(numericValues);
                             html += `
                                 <div class="stat-card">
                                     <h4>${column}</h4>
@@ -1707,6 +1368,22 @@
             }, 100);
         }
 
+        function calculateNumericStats(values) {
+            const sorted = values.sort((a, b) => a - b);
+            const mean = _.mean(values);
+            
+            return {
+                count: values.length,
+                mean: mean,
+                median: sorted[Math.floor(sorted.length / 2)],
+                std: Math.sqrt(_.mean(values.map(x => Math.pow(x - mean, 2)))),
+                min: _.min(values),
+                max: _.max(values),
+                q1: sorted[Math.floor(sorted.length * 0.25)],
+                q3: sorted[Math.floor(sorted.length * 0.75)]
+            };
+        }
+
         function generateVisualizations(data) {
             const vizContent = document.getElementById('visualizationsContent');
             vizContent.innerHTML = '<div class="loading">Generando visualizaciones...</div>';
@@ -1720,11 +1397,10 @@
                         const values = data.map(row => row[column]).filter(val => val !== null && val !== undefined && !isNaN(val));
                         
                         if (values.length > 0) {
-                            // Histograma
                             const chartId = `chart-${chartIndex++}`;
                             html += `
                                 <div class="chart-container">
-                                    <div class="chart-title">📊 Histograma - ${column}</div>
+                                    <div class="chart-title">Histograma - ${column}</div>
                                     <canvas id="${chartId}" width="400" height="200"></canvas>
                                 </div>
                             `;
@@ -1737,7 +1413,6 @@
                             }, 100);
                         }
                     } else {
-                        // Gráfico de barras para categóricas
                         const values = data.map(row => row[column]).filter(val => val !== null && val !== undefined && val !== '');
                         const counts = _.countBy(values);
                         const sortedCounts = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -1746,7 +1421,7 @@
                             const chartId = `chart-${chartIndex++}`;
                             html += `
                                 <div class="chart-container">
-                                    <div class="chart-title">📈 Distribución - ${column}</div>
+                                    <div class="chart-title">Distribución - ${column}</div>
                                     <canvas id="${chartId}" width="400" height="200"></canvas>
                                 </div>
                             `;
@@ -1766,12 +1441,6 @@
         }
 
         function createHistogram(ctx, values, title) {
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js no está disponible');
-                ctx.parentElement.innerHTML = '<p style="color: red;">Error: Chart.js no se pudo cargar</p>';
-                return;
-            }
-
             const min = Math.min(...values);
             const max = Math.max(...values);
             const bins = 15;
@@ -1803,23 +1472,15 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: {
-                            display: false
-                        }
+                        legend: { display: false }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Frecuencia'
-                            }
+                            title: { display: true, text: 'Frecuencia' }
                         },
                         x: {
-                            title: {
-                                display: true,
-                                text: title
-                            }
+                            title: { display: true, text: title }
                         }
                     }
                 }
@@ -1827,12 +1488,6 @@
         }
 
         function createBarChart(ctx, data, title) {
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js no está disponible');
-                ctx.parentElement.innerHTML = '<p style="color: red;">Error: Chart.js no se pudo cargar</p>';
-                return;
-            }
-
             new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -1848,17 +1503,12 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: {
-                            display: false
-                        }
+                        legend: { display: false }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Frecuencia'
-                            }
+                            title: { display: true, text: 'Frecuencia' }
                         }
                     }
                 }
@@ -1971,13 +1621,7 @@
                     if (dataTypes[column] === 'numeric') {
                         const numericValues = values.map(Number).filter(val => !isNaN(val));
                         if (numericValues.length > 0) {
-                            const sorted = numericValues.sort((a, b) => a - b);
-                            const q1 = sorted[Math.floor(sorted.length * 0.25)];
-                            const q3 = sorted[Math.floor(sorted.length * 0.75)];
-                            const iqr = q3 - q1;
-                            const lowerBound = q1 - 1.5 * iqr;
-                            const upperBound = q3 + 1.5 * iqr;
-                            outliers = numericValues.filter(val => val < lowerBound || val > upperBound).length;
+                            outliers = detectOutliers(numericValues);
                         }
                     }
 
@@ -2011,29 +1655,34 @@
             }, 100);
         }
 
-        // Funciones para gráficas personalizadas
-        function populateCustomChartVariables() {
-            // Limpiar opciones anteriores
-            [xAxisVariable, yAxisVariable, categoryVariable].forEach(select => {
-                select.innerHTML = '<option value="">Selecciona una variable...</option>';
-            });
+        function detectOutliers(values) {
+            const sorted = values.sort((a, b) => a - b);
+            const q1 = sorted[Math.floor(sorted.length * 0.25)];
+            const q3 = sorted[Math.floor(sorted.length * 0.75)];
+            const iqr = q3 - q1;
+            const lowerBound = q1 - 1.5 * iqr;
+            const upperBound = q3 + 1.5 * iqr;
+            return values.filter(val => val < lowerBound || val > upperBound).length;
+        }
 
-            // Poblar con las columnas seleccionadas
-            selectedColumns.forEach(column => {
-                const option1 = new Option(column, column);
-                const option2 = new Option(column, column);
-                const option3 = new Option(column, column);
-                
-                xAxisVariable.add(option1);
-                yAxisVariable.add(option2);
-                categoryVariable.add(option3);
+        // Gráficas personalizadas
+        function populateCustomChartVariables() {
+            const selects = ['xAxisVariable', 'yAxisVariable', 'categoryVariable'];
+            
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value="">Selecciona una variable...</option>';
+                selectedColumns.forEach(column => {
+                    const option = new Option(column, column);
+                    select.add(option);
+                });
             });
 
             updateChartControls();
         }
 
         function updateChartControls() {
-            const selectedType = chartType.value;
+            const selectedType = document.getElementById('chartType').value;
             const xAxisGroup = document.getElementById('xAxisGroup');
             const yAxisGroup = document.getElementById('yAxisGroup');
             const categoryGroup = document.getElementById('categoryGroup');
@@ -2043,11 +1692,10 @@
             yAxisGroup.style.display = 'block';
             categoryGroup.style.display = 'none';
 
-            // Actualizar controles según el tipo de gráfica
             switch(selectedType) {
                 case 'histogram':
                     yAxisGroup.style.display = 'none';
-                    xAxisGroup.querySelector('label').innerHTML = '<strong>📊 Variable para Histograma:</strong>';
+                    xAxisGroup.querySelector('label').innerHTML = '<strong>Variable para Histograma:</strong>';
                     break;
                 case 'pie':
                     xAxisGroup.style.display = 'none';
@@ -2055,23 +1703,23 @@
                     categoryGroup.style.display = 'block';
                     break;
                 case 'scatter':
-                    xAxisGroup.querySelector('label').innerHTML = '<strong>📐 Variable X (Eje Horizontal):</strong>';
-                    yAxisGroup.querySelector('label').innerHTML = '<strong>📏 Variable Y (Eje Vertical):</strong>';
+                    xAxisGroup.querySelector('label').innerHTML = '<strong>Variable X (Horizontal):</strong>';
+                    yAxisGroup.querySelector('label').innerHTML = '<strong>Variable Y (Vertical):</strong>';
                     break;
                 case 'bar':
                 case 'line':
-                    xAxisGroup.querySelector('label').innerHTML = '<strong>📐 Variable X (Categorías/Tiempo):</strong>';
-                    yAxisGroup.querySelector('label').innerHTML = '<strong>📏 Variable Y (Valores):</strong>';
+                    xAxisGroup.querySelector('label').innerHTML = '<strong>Variable X (Categorías/Tiempo):</strong>';
+                    yAxisGroup.querySelector('label').innerHTML = '<strong>Variable Y (Valores):</strong>';
                     break;
             }
         }
 
         function createCustomChartFunction() {
-            const selectedType = chartType.value;
-            const xVar = xAxisVariable.value;
-            const yVar = yAxisVariable.value;
-            const categoryVar = categoryVariable.value;
-            const title = chartTitle.value || `Gráfica ${selectedType}`;
+            const selectedType = document.getElementById('chartType').value;
+            const xVar = document.getElementById('xAxisVariable').value;
+            const yVar = document.getElementById('yAxisVariable').value;
+            const categoryVar = document.getElementById('categoryVariable').value;
+            const title = document.getElementById('chartTitle').value || `Gráfica ${selectedType}`;
 
             // Validaciones
             if (selectedType === 'histogram' && !xVar) {
@@ -2087,84 +1735,37 @@
                 return;
             }
 
-            // Crear la gráfica
             const chartId = `custom-chart-${customChartCounter++}`;
-            createCustomChartElement(chartId, title, selectedType, xVar, yVar, categoryVar);
+            createCustomChartElement(chartId, { type: selectedType, xVar, yVar, categoryVar, title });
         }
 
-        function createCustomChartElement(chartId, title, type, xVar, yVar, categoryVar) {
-            // Remover mensaje de "no hay gráficas" si existe
-            const noChartsMessage = customChartsContainer.querySelector('.no-charts-message');
+        function createCustomChartElement(chartId, options) {
+            const noChartsMessage = document.querySelector('#customChartsContainer .no-charts-message');
             if (noChartsMessage) {
                 noChartsMessage.remove();
             }
 
-            // Crear el contenedor de la gráfica
             const chartContainer = document.createElement('div');
             chartContainer.className = 'custom-chart-item';
             chartContainer.innerHTML = `
                 <div class="custom-chart-header">
-                    <div class="custom-chart-title">${title}</div>
-                    <button class="delete-chart-button" onclick="deleteCustomChart(this)">🗑️ Eliminar</button>
-                </div>
-                <div class="chart-info">
-                    Tipo: ${getChartTypeLabel(type)} | 
-                    Variables: ${getVariablesInfo(type, xVar, yVar, categoryVar)}
+                    <div class="custom-chart-title">${options.title}</div>
+                    <button class="delete-chart-button" onclick="deleteCustomChart(this)">Eliminar</button>
                 </div>
                 <canvas id="${chartId}" width="400" height="200"></canvas>
             `;
 
-            customChartsContainer.appendChild(chartContainer);
+            document.getElementById('customChartsContainer').appendChild(chartContainer);
 
-            // Generar la gráfica
             setTimeout(() => {
                 const canvas = document.getElementById(chartId);
                 if (canvas) {
-                    generateCustomChart(canvas, type, xVar, yVar, categoryVar, title);
+                    generateCustomChart(canvas, options);
                 }
             }, 100);
-
-            // Actualizar lista de exportación
-            setTimeout(() => {
-                updateIndividualChartsExport();
-            }, 200);
         }
 
-        function getChartTypeLabel(type) {
-            const labels = {
-                'scatter': '🔵 Scatter Plot',
-                'histogram': '📊 Histograma', 
-                'pie': '🥧 Gráfico de Pie',
-                'bar': '📈 Gráfico de Barras',
-                'line': '📉 Gráfico de Líneas'
-            };
-            return labels[type] || type;
-        }
-
-        function getVariablesInfo(type, xVar, yVar, categoryVar) {
-            switch(type) {
-                case 'histogram':
-                    return xVar;
-                case 'pie':
-                    return categoryVar;
-                case 'scatter':
-                    return `X: ${xVar}, Y: ${yVar}`;
-                case 'bar':
-                case 'line':
-                    return `X: ${xVar}, Y: ${yVar}`;
-                default:
-                    return '';
-            }
-        }
-
-        function generateCustomChart(canvas, type, xVar, yVar, categoryVar, title) {
-            if (typeof Chart === 'undefined') {
-                console.error('Chart.js no está disponible');
-                canvas.parentElement.innerHTML = '<p style="color: red;">Error: Chart.js no se pudo cargar</p>';
-                return;
-            }
-
-            // Filtrar datos por columnas seleccionadas
+        function generateCustomChart(canvas, options) {
             const filteredData = csvData.map(row => {
                 const filteredRow = {};
                 selectedColumns.forEach(col => {
@@ -2173,21 +1774,21 @@
                 return filteredRow;
             });
 
-            switch(type) {
+            switch(options.type) {
                 case 'histogram':
-                    createCustomHistogram(canvas, filteredData, xVar, title);
+                    createCustomHistogram(canvas, filteredData, options.xVar, options.title);
                     break;
                 case 'pie':
-                    createCustomPieChart(canvas, filteredData, categoryVar, title);
+                    createCustomPieChart(canvas, filteredData, options.categoryVar, options.title);
                     break;
                 case 'scatter':
-                    createCustomScatterPlot(canvas, filteredData, xVar, yVar, title);
+                    createCustomScatterPlot(canvas, filteredData, options.xVar, options.yVar, options.title);
                     break;
                 case 'bar':
-                    createCustomBarChart(canvas, filteredData, xVar, yVar, title);
+                    createCustomBarChart(canvas, filteredData, options.xVar, options.yVar, options.title);
                     break;
                 case 'line':
-                    createCustomLineChart(canvas, filteredData, xVar, yVar, title);
+                    createCustomLineChart(canvas, filteredData, options.xVar, options.yVar, options.title);
                     break;
             }
         }
@@ -2198,59 +1799,7 @@
                 canvas.parentElement.innerHTML = '<p style="color: red;">No hay datos numéricos válidos para esta variable.</p>';
                 return;
             }
-
-            const min = Math.min(...values);
-            const max = Math.max(...values);
-            const bins = 20;
-            const binWidth = (max - min) / bins;
-            
-            const histogram = new Array(bins).fill(0);
-            const labels = [];
-
-            for (let i = 0; i < bins; i++) {
-                const binStart = min + i * binWidth;
-                const binEnd = min + (i + 1) * binWidth;
-                labels.push(`${binStart.toFixed(1)}`);
-                histogram[i] = values.filter(val => val >= binStart && (i === bins - 1 ? val <= binEnd : val < binEnd)).length;
-            }
-
-            new Chart(canvas, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Frecuencia',
-                        data: histogram,
-                        backgroundColor: 'rgba(72, 187, 120, 0.7)',
-                        borderColor: 'rgba(72, 187, 120, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: title
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Frecuencia'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: variable
-                            }
-                        }
-                    }
-                }
-            });
+            createHistogram(canvas, values, variable);
         }
 
         function createCustomPieChart(canvas, data, variable, title) {
@@ -2289,13 +1838,8 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        title: {
-                            display: true,
-                            text: title
-                        },
-                        legend: {
-                            position: 'right'
-                        }
+                        title: { display: true, text: title },
+                        legend: { position: 'right' }
                     }
                 }
             });
@@ -2326,31 +1870,17 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        title: {
-                            display: true,
-                            text: title
-                        }
+                        title: { display: true, text: title }
                     },
                     scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: xVar
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: yVar
-                            }
-                        }
+                        x: { title: { display: true, text: xVar } },
+                        y: { title: { display: true, text: yVar } }
                     }
                 }
             });
         }
 
         function createCustomBarChart(canvas, data, xVar, yVar, title) {
-            // Agrupar datos por la variable X
             const groupedData = _.groupBy(data, xVar);
             const chartData = Object.entries(groupedData).map(([key, values]) => {
                 const numericValues = values.map(v => Number(v[yVar])).filter(v => !isNaN(v));
@@ -2380,32 +1910,20 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        title: {
-                            display: true,
-                            text: title
-                        }
+                        title: { display: true, text: title }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: `Promedio de ${yVar}`
-                            }
+                            title: { display: true, text: `Promedio de ${yVar}` }
                         },
-                        x: {
-                            title: {
-                                display: true,
-                                text: xVar
-                            }
-                        }
+                        x: { title: { display: true, text: xVar } }
                     }
                 }
             });
         }
 
         function createCustomLineChart(canvas, data, xVar, yVar, title) {
-            // Ordenar datos por X y agrupar si es necesario
             const sortedData = data.filter(row => 
                 row[xVar] !== null && row[xVar] !== undefined && 
                 row[yVar] !== null && row[yVar] !== undefined && !isNaN(Number(row[yVar]))
@@ -2414,7 +1932,7 @@
                     return Number(a[xVar]) - Number(b[xVar]);
                 }
                 return a[xVar].localeCompare(b[xVar]);
-            }).slice(0, 50); // Limitar a 50 puntos para mejor rendimiento
+            }).slice(0, 50);
 
             if (sortedData.length === 0) {
                 canvas.parentElement.innerHTML = '<p style="color: red;">No hay datos válidos para estas variables.</p>';
@@ -2437,24 +1955,11 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        title: {
-                            display: true,
-                            text: title
-                        }
+                        title: { display: true, text: title }
                     },
                     scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: xVar
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: yVar
-                            }
-                        }
+                        x: { title: { display: true, text: xVar } },
+                        y: { title: { display: true, text: yVar } }
                     }
                 }
             });
@@ -2464,17 +1969,14 @@
             const chartItem = button.closest('.custom-chart-item');
             chartItem.remove();
 
-            // Si no hay más gráficas, mostrar mensaje
-            if (customChartsContainer.children.length === 0) {
-                customChartsContainer.innerHTML = `
+            const container = document.getElementById('customChartsContainer');
+            if (container.children.length === 0) {
+                container.innerHTML = `
                     <div class="no-charts-message">
-                        <p>🎯 Crea tu primera gráfica personalizada seleccionando el tipo y las variables!</p>
+                        <p>Crea tu primera gráfica personalizada seleccionando el tipo y las variables</p>
                     </div>
                 `;
             }
-            
-            // Actualizar lista de exportación
-            updateIndividualChartsExport();
         }
 
         function switchTab(tabName) {
@@ -2485,129 +1987,7 @@
             document.getElementById(tabName).classList.add('active');
         }
 
-        // Funciones de exportación
-        function prepareExportOptions() {
-            // Habilitar botones de exportación básicos
-            document.querySelectorAll('.export-button:not(#generatePDFReport)').forEach(btn => btn.disabled = false);
-            
-            // Verificar disponibilidad de jsPDF y ajustar botón PDF
-            const pdfButton = document.getElementById('generatePDFReport');
-            const html2canvasAvailable = typeof html2canvas !== 'undefined';
-            
-            if (typeof window.jsPDF === 'undefined') {
-                pdfButton.disabled = true;
-                pdfButton.style.opacity = '0.5';
-                pdfButton.innerHTML = html2canvasAvailable ? '📄 PDF (HTML Alternativo)' : '❌ PDF No Disponible';
-                pdfButton.title = html2canvasAvailable ? 
-                    'jsPDF no disponible. Haz clic para generar HTML optimizado para conversión a PDF' : 
-                    'jsPDF no está disponible y html2canvas tampoco. Usa exportación HTML básica.';
-                
-                // Agregar mensaje informativo
-                const pdfCard = pdfButton.closest('.export-card');
-                if (pdfCard && !pdfCard.querySelector('.pdf-warning')) {
-                    const warning = document.createElement('div');
-                    warning.className = 'pdf-warning';
-                    warning.style.cssText = `
-                        background: ${html2canvasAvailable ? '#e6fffa' : '#fed7d7'}; 
-                        color: ${html2canvasAvailable ? '#234e52' : '#c53030'}; 
-                        padding: 12px; border-radius: 6px; 
-                        border: 1px solid ${html2canvasAvailable ? '#38b2ac' : '#fc8181'};
-                        margin-top: 15px; font-size: 0.9em; line-height: 1.4;
-                    `;
-                    
-                    if (html2canvasAvailable) {
-                        warning.innerHTML = `
-                            <strong>✨ Alternativa Disponible:</strong><br>
-                            • html2canvas está funcionando<br>
-                            • Puedes generar HTML optimizado para PDF<br>
-                            • Usa Ctrl+P → "Guardar como PDF" para convertir<br>
-                            • Calidad profesional garantizada
-                        `;
-                        pdfButton.disabled = false;
-                        pdfButton.style.opacity = '0.8';
-                    } else {
-                        warning.innerHTML = `
-                            <strong>ℹ️ Información:</strong><br>
-                            • jsPDF y html2canvas no disponibles<br>
-                            • Usa exportación HTML básica<br>
-                            • Luego imprime como PDF desde el navegador
-                        `;
-                    }
-                    pdfCard.appendChild(warning);
-                }
-            } else {
-                pdfButton.disabled = false;
-                pdfButton.style.opacity = '1';
-                pdfButton.innerHTML = '📑 Generar Reporte PDF';
-                pdfButton.title = 'Generar un reporte PDF profesional con gráficos integrados';
-                
-                // Remover advertencia si existe
-                const warning = document.querySelector('.pdf-warning');
-                if (warning) warning.remove();
-            }
-            
-            // Actualizar botones de exportación de gráficos según html2canvas
-            const chartButtons = document.querySelectorAll('#exportAllCharts, #exportCustomCharts');
-            chartButtons.forEach(btn => {
-                if (html2canvasAvailable) {
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                    if (!btn.originalTitle) btn.originalTitle = btn.title;
-                    btn.title = btn.originalTitle;
-                } else {
-                    btn.disabled = true;
-                    btn.style.opacity = '0.5';
-                    btn.title = 'html2canvas no disponible - exportación de gráficos limitada';
-                }
-            });
-            
-            // Preparar lista de gráficos individuales
-            updateIndividualChartsExport();
-            
-            console.log('🎛️ Exportación configurada:', {
-                'PDF nativo': typeof window.jsPDF !== 'undefined' ? '✅' : '❌',
-                'HTML→PDF': html2canvasAvailable ? '✅' : '❌', 
-                'Gráficos PNG': html2canvasAvailable ? '✅' : '❌',
-                'Datos CSV': '✅',
-                'HTML básico': '✅'
-            });
-        }
-
-        function updateIndividualChartsExport() {
-            const chartElements = document.querySelectorAll('canvas[id^="chart-"], canvas[id^="custom-chart-"]');
-            
-            if (chartElements.length === 0) {
-                individualChartsExport.innerHTML = '<p><em>No hay gráficos disponibles para exportar</em></p>';
-                return;
-            }
-
-            let html = '<h5>Gráficos disponibles:</h5>';
-            chartElements.forEach((canvas, index) => {
-                const title = getChartTitle(canvas);
-                html += `
-                    <div class="chart-export-item">
-                        <span class="chart-export-name">${title}</span>
-                        <button class="export-button secondary" onclick="exportSingleChart('${canvas.id}', '${title}')">
-                            🖼️ Exportar PNG
-                        </button>
-                    </div>
-                `;
-            });
-            
-            individualChartsExport.innerHTML = html;
-        }
-
-        function getChartTitle(canvas) {
-            const container = canvas.closest('.chart-container, .custom-chart-item');
-            if (container) {
-                const titleElement = container.querySelector('.chart-title, .custom-chart-title');
-                if (titleElement) {
-                    return titleElement.textContent;
-                }
-            }
-            return `Gráfico ${canvas.id}`;
-        }
-
+        // Funciones de exportación simplificadas
         function downloadFile(content, filename, type = 'text/csv') {
             const blob = new Blob([content], { type });
             const url = window.URL.createObjectURL(blob);
@@ -2626,14 +2006,7 @@
                 return;
             }
 
-            const messages = {
-                'filtered': { title: 'Exportando datos filtrados...', message: 'Preparando archivo CSV con las columnas seleccionadas' },
-                'statistics': { title: 'Exportando estadísticas...', message: 'Generando resumen estadístico en formato CSV' },
-                'correlations': { title: 'Exportando correlaciones...', message: 'Calculando matriz de correlaciones para exportar' }
-            };
-
-            const msg = messages[type] || messages['filtered'];
-            showLoading(true, msg.title, msg.message);
+            showLoading(true, 'Exportando datos...', 'Preparando archivo CSV');
 
             setTimeout(() => {
                 try {
@@ -2648,10 +2021,6 @@
                         case 'statistics':
                             csvContent = generateStatisticsCSV();
                             filename = 'estadisticas.csv';
-                            break;
-                        case 'correlations':
-                            csvContent = generateCorrelationsCSV();
-                            filename = 'correlaciones.csv';
                             break;
                     }
 
@@ -2692,18 +2061,7 @@
                 if (dataTypes[column] === 'numeric') {
                     const values = analysisData.filtered.map(row => Number(row[column])).filter(val => !isNaN(val));
                     if (values.length > 0) {
-                        const sorted = values.sort((a, b) => a - b);
-                        const stats = {
-                            'Cantidad': values.length,
-                            'Media': _.mean(values),
-                            'Mediana': sorted[Math.floor(sorted.length / 2)],
-                            'Desv. Estándar': Math.sqrt(_.mean(values.map(x => Math.pow(x - _.mean(values), 2)))),
-                            'Mínimo': _.min(values),
-                            'Máximo': _.max(values),
-                            'Q1 (25%)': sorted[Math.floor(sorted.length * 0.25)],
-                            'Q3 (75%)': sorted[Math.floor(sorted.length * 0.75)]
-                        };
-                        
+                        const stats = calculateNumericStats(values);
                         Object.entries(stats).forEach(([metric, value]) => {
                             csvContent += `"${column}","${metric}",${value}\n`;
                         });
@@ -2714,54 +2072,21 @@
             return csvContent;
         }
 
-        function generateCorrelationsCSV() {
-            const numericColumns = analysisData.columns.filter(col => dataTypes[col] === 'numeric');
-            if (numericColumns.length < 2) return 'Variable1,Variable2,Correlación\n';
-
-            let csvContent = 'Variable1,Variable2,Correlación\n';
-            
-            for (let i = 0; i < numericColumns.length; i++) {
-                for (let j = i + 1; j < numericColumns.length; j++) {
-                    const col1 = numericColumns[i];
-                    const col2 = numericColumns[j];
-                    
-                    const values1 = analysisData.filtered.map(row => Number(row[col1])).filter(val => !isNaN(val));
-                    const values2 = analysisData.filtered.map(row => Number(row[col2])).filter(val => !isNaN(val));
-                    const correlation = calculateCorrelation(values1, values2);
-                    
-                    csvContent += `"${col1}","${col2}",${correlation.toFixed(3)}\n`;
-                }
-            }
-            
-            return csvContent;
-        }
-
         function exportCharts(type) {
-            const title = type === 'all' ? 'Exportando todos los gráficos...' : 'Exportando gráficos personalizados...';
-            const message = 'Convirtiendo gráficos a imágenes PNG de alta calidad';
-            
-            showLoading(true, title, message);
+            showLoading(true, 'Exportando gráficos...', 'Convirtiendo gráficos a imágenes PNG');
             
             setTimeout(() => {
                 try {
-                    const quality = parseFloat(document.getElementById('imageQuality').value);
                     const charts = [];
+                    const canvases = document.querySelectorAll('canvas[id^="chart-"], canvas[id^="custom-chart-"]');
                     
-                    if (type === 'all') {
-                        document.querySelectorAll('canvas[id^="chart-"], canvas[id^="custom-chart-"]').forEach(canvas => {
-                            charts.push({
-                                name: getChartTitle(canvas),
-                                data: canvas.toDataURL('image/png', quality)
-                            });
+                    canvases.forEach(canvas => {
+                        const title = getChartTitle(canvas);
+                        charts.push({
+                            name: title,
+                            data: canvas.toDataURL('image/png', 1.0)
                         });
-                    } else if (type === 'custom') {
-                        document.querySelectorAll('canvas[id^="custom-chart-"]').forEach(canvas => {
-                            charts.push({
-                                name: getChartTitle(canvas),
-                                data: canvas.toDataURL('image/png', quality)
-                            });
-                        });
-                    }
+                    });
                     
                     if (charts.length === 0) {
                         showError('No hay gráficos disponibles para exportar.');
@@ -2769,7 +2094,6 @@
                         return;
                     }
                     
-                    // Crear y descargar archivos
                     charts.forEach((chart, index) => {
                         const link = document.createElement('a');
                         link.download = `${chart.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
@@ -2790,25 +2114,15 @@
             }, 300);
         }
 
-        function exportSingleChart(canvasId, title) {
-            try {
-                const canvas = document.getElementById(canvasId);
-                if (!canvas) {
-                    showError('Gráfico no encontrado.');
-                    return;
+        function getChartTitle(canvas) {
+            const container = canvas.closest('.chart-container, .custom-chart-item');
+            if (container) {
+                const titleElement = container.querySelector('.chart-title, .custom-chart-title');
+                if (titleElement) {
+                    return titleElement.textContent;
                 }
-                
-                const quality = parseFloat(document.getElementById('imageQuality').value);
-                const link = document.createElement('a');
-                link.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
-                link.href = canvas.toDataURL('image/png', quality);
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch (error) {
-                showError('Error al exportar el gráfico: ' + error.message);
             }
+            return `Gráfico ${canvas.id}`;
         }
 
         function generateReport(format) {
@@ -2817,63 +2131,22 @@
                 return;
             }
 
-            if (format === 'pdf' && typeof window.jsPDF === 'undefined') {
-                // Ofrecer alternativa HTML para impresión
-                const userConfirm = confirm(
-                    '📄 PDF no disponible\n\n' +
-                    'La exportación directa a PDF no está disponible debido a un problema técnico.\n\n' +
-                    '¿Deseas generar un reporte HTML optimizado para impresión?\n' +
-                    'Podrás convertirlo a PDF usando Ctrl+P → "Guardar como PDF" en tu navegador.'
-                );
-                
-                if (!userConfirm) {
-                    return;
-                }
-                
-                // Generar HTML optimizado para impresión
-                format = 'html-print';
-            }
-
-            const title = format === 'pdf' ? 'Generando PDF...' : 
-                         format === 'html-print' ? 'Generando HTML para impresión...' : 
-                         'Generando HTML...';
-            const message = format === 'pdf' ? 
-                'Creando PDF con gráficos de alta calidad. Esto puede tomar unos segundos...' : 
-                format === 'html-print' ?
-                'Preparando reporte HTML optimizado para convertir a PDF...' :
-                'Preparando reporte HTML...';
-            
-            showLoading(true, title, message);
+            showLoading(true, 'Generando reporte HTML...', 'Preparando reporte profesional con gráficos integrados');
 
             setTimeout(() => {
                 try {
                     const reportConfig = getReportConfig();
+                    const htmlReport = generateHTMLReportContent(reportConfig);
+                    const filename = `${reportConfig.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
                     
-                    if (format === 'html' || format === 'html-print') {
-                        const htmlReport = generateHTMLReportContent(reportConfig, format === 'html-print');
-                        const filename = format === 'html-print' ? 
-                            `${reportConfig.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_para_impresion.html` :
-                            `${reportConfig.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.html`;
-                        
-                        downloadFile(htmlReport, filename, 'text/html');
-                        showLoading(false);
-                        
-                        if (format === 'html-print') {
-                            setTimeout(() => {
-                                alert(
-                                    '✅ Reporte generado exitosamente\n\n' +
-                                    '📋 Instrucciones para convertir a PDF:\n' +
-                                    '1. Abre el archivo HTML descargado\n' +
-                                    '2. Presiona Ctrl+P (Cmd+P en Mac)\n' +
-                                    '3. Selecciona "Guardar como PDF"\n' +
-                                    '4. Ajusta los márgenes si es necesario\n\n' +
-                                    '💡 El reporte está optimizado para impresión'
-                                );
-                            }, 500);
-                        }
-                    } else if (format === 'pdf') {
-                        generatePDFReportFunction(reportConfig);
-                    }
+                    downloadFile(htmlReport, filename, 'text/html');
+                    showLoading(false);
+                    
+                    // Mostrar instrucciones de conversión a PDF
+                    setTimeout(() => {
+                        showPDFConversionInstructions();
+                    }, 1000);
+                    
                 } catch (error) {
                     showLoading(false);
                     showError('Error al generar el reporte: ' + error.message);
@@ -2881,318 +2154,57 @@
             }, 500);
         }
 
-        async function generatePDFReportFunction(config) {
-            try {
-                // Verificar que jsPDF esté disponible
-                if (typeof window.jsPDF === 'undefined') {
-                    throw new Error('jsPDF no está disponible');
-                }
-
-                const { jsPDF } = window.jsPDF;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                let yPosition = 20;
-                const pageHeight = pdf.internal.pageSize.height;
-                const pageWidth = pdf.internal.pageSize.width;
-                const margin = 20;
-                const contentWidth = pageWidth - (margin * 2);
-
-                // Función para agregar nueva página si es necesario
-                const checkPageBreak = (neededHeight) => {
-                    if (yPosition + neededHeight > pageHeight - 20) {
-                        pdf.addPage();
-                        yPosition = 20;
-                        return true;
-                    }
-                    return false;
-                };
-
-                // Header del reporte
-                pdf.setFontSize(24);
-                pdf.setTextColor(102, 126, 234);
-                pdf.text(config.title, pageWidth / 2, yPosition, { align: 'center' });
-                yPosition += 15;
-
-                pdf.setFontSize(12);
-                pdf.setTextColor(102, 102, 102);
-                pdf.text(`Autor: ${config.author}`, pageWidth / 2, yPosition, { align: 'center' });
-                yPosition += 8;
-                pdf.text(`Fecha: ${config.date}`, pageWidth / 2, yPosition, { align: 'center' });
-                yPosition += 8;
-                pdf.text(`Dataset: ${csvFileInput.files[0]?.name || 'Datos analizados'}`, pageWidth / 2, yPosition, { align: 'center' });
-                yPosition += 20;
-
-                // Línea separadora
-                pdf.setLineWidth(0.5);
-                pdf.setDrawColor(102, 126, 234);
-                pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-                yPosition += 15;
-
-                // Resumen General
-                if (config.includeOverview) {
-                    checkPageBreak(30);
-                    pdf.setFontSize(16);
-                    pdf.setTextColor(45, 55, 72);
-                    pdf.text('📊 Resumen General', margin, yPosition);
-                    yPosition += 12;
-
-                    const overviewData = getOverviewDataForPDF();
-                    pdf.setFontSize(10);
-                    pdf.setTextColor(0, 0, 0);
-                    
-                    overviewData.forEach(item => {
-                        checkPageBreak(8);
-                        pdf.text(`• ${item.label}: ${item.value}`, margin + 5, yPosition);
-                        yPosition += 6;
-                    });
-                    yPosition += 10;
-                }
-
-                // Estadísticas
-                if (config.includeStatistics) {
-                    checkPageBreak(30);
-                    pdf.setFontSize(16);
-                    pdf.setTextColor(45, 55, 72);
-                    pdf.text('📈 Estadísticas Descriptivas', margin, yPosition);
-                    yPosition += 12;
-
-                    const statisticsData = getStatisticsDataForPDF();
-                    pdf.setFontSize(10);
-                    
-                    statisticsData.forEach(columnStats => {
-                        checkPageBreak(25);
-                        pdf.setFont(undefined, 'bold');
-                        pdf.text(columnStats.column, margin + 5, yPosition);
-                        yPosition += 8;
-                        
-                        pdf.setFont(undefined, 'normal');
-                        columnStats.stats.forEach(stat => {
-                            checkPageBreak(6);
-                            pdf.text(`  • ${stat.label}: ${stat.value}`, margin + 10, yPosition);
-                            yPosition += 5;
-                        });
-                        yPosition += 5;
-                    });
-                    yPosition += 10;
-                }
-
-                // Gráficos
-                if (config.includeVisualizations || config.includeCustomCharts) {
-                    await addChartsToPDF(pdf, config, pageWidth, pageHeight, margin, contentWidth);
-                }
-
-                // Correlaciones (como tabla)
-                if (config.includeCorrelations) {
-                    await addCorrelationsToPDF(pdf, pageWidth, pageHeight, margin);
-                }
-
-                // Calidad de datos
-                if (config.includeQuality) {
-                    await addQualityDataToPDF(pdf, pageWidth, pageHeight, margin);
-                }
-
-                // Footer
-                const totalPages = pdf.getNumberOfPages();
-                for (let i = 1; i <= totalPages; i++) {
-                    pdf.setPage(i);
-                    pdf.setFontSize(8);
-                    pdf.setTextColor(128, 128, 128);
-                    pdf.text(`Página ${i} de ${totalPages} - Generado por Analizador EDA`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-                }
-
-                // Descargar PDF
-                const filename = `${config.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
-                pdf.save(filename);
-                showLoading(false);
-
-            } catch (error) {
-                showLoading(false);
-                showError('Error al generar PDF: ' + error.message);
-                console.error('PDF Error:', error);
-            }
-        }
-
-        function getOverviewDataForPDF() {
-            return [
-                { label: 'Total de filas', value: analysisData.filtered.length.toLocaleString() },
-                { label: 'Columnas analizadas', value: analysisData.columns.length },
-                { label: 'Columnas numéricas', value: analysisData.columns.filter(col => dataTypes[col] === 'numeric').length },
-                { label: 'Columnas categóricas', value: analysisData.columns.filter(col => dataTypes[col] === 'categorical').length }
-            ];
-        }
-
-        function getStatisticsDataForPDF() {
-            const stats = [];
+        function showPDFConversionInstructions() {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.7); z-index: 10000;
+                display: flex; justify-content: center; align-items: center;
+                padding: 20px; box-sizing: border-box;
+            `;
             
-            analysisData.columns.forEach(column => {
-                const values = analysisData.filtered.map(row => row[column]).filter(val => val !== null && val !== undefined && val !== '');
-                
-                if (dataTypes[column] === 'numeric') {
-                    const numericValues = values.map(Number).filter(val => !isNaN(val));
-                    if (numericValues.length > 0) {
-                        const sorted = numericValues.sort((a, b) => a - b);
-                        const columnStats = {
-                            column: column,
-                            stats: [
-                                { label: 'Cantidad', value: numericValues.length },
-                                { label: 'Media', value: _.mean(numericValues).toFixed(2) },
-                                { label: 'Mediana', value: sorted[Math.floor(sorted.length / 2)].toFixed(2) },
-                                { label: 'Mínimo', value: _.min(numericValues) },
-                                { label: 'Máximo', value: _.max(numericValues) }
-                            ]
-                        };
-                        stats.push(columnStats);
-                    }
-                } else {
-                    const counts = _.countBy(values);
-                    const sortedCounts = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-                    const columnStats = {
-                        column: `${column} (Categórica)`,
-                        stats: [
-                            { label: 'Valores únicos', value: Object.keys(counts).length },
-                            { label: 'Más frecuente', value: `${sortedCounts[0][0]} (${sortedCounts[0][1]})` }
-                        ]
-                    };
-                    stats.push(columnStats);
-                }
-            });
-            
-            return stats;
-        }
-
-        async function addChartsToPDF(pdf, config, pageWidth, pageHeight, margin, contentWidth) {
-            const charts = [];
-            
-            // Recopilar gráficos
-            if (config.includeVisualizations) {
-                document.querySelectorAll('canvas[id^="chart-"]').forEach(canvas => {
-                    charts.push({ canvas, title: getChartTitle(canvas) });
-                });
-            }
-            
-            if (config.includeCustomCharts) {
-                document.querySelectorAll('canvas[id^="custom-chart-"]').forEach(canvas => {
-                    charts.push({ canvas, title: getChartTitle(canvas) });
-                });
-            }
-
-            if (charts.length === 0) return;
-
-            // Agregar título de sección
-            pdf.addPage();
-            let yPos = 20;
-            pdf.setFontSize(16);
-            pdf.setTextColor(45, 55, 72);
-            pdf.text('📊 Visualizaciones', margin, yPos);
-            yPos += 20;
-
-            // Agregar cada gráfico
-            for (const chart of charts) {
-                if (yPos > pageHeight - 120) { // Espacio mínimo para un gráfico
-                    pdf.addPage();
-                    yPos = 20;
-                }
-
-                try {
-                    // Título del gráfico
-                    pdf.setFontSize(12);
-                    pdf.setFont(undefined, 'bold');
-                    pdf.text(chart.title, margin, yPos);
-                    yPos += 10;
-
-                    // Convertir canvas a imagen
-                    const quality = parseFloat(document.getElementById('imageQuality').value);
-                    const imgData = chart.canvas.toDataURL('image/png', quality);
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; 
+                           width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
+                    <div style="text-align: center; margin-bottom: 25px;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
+                        <h2 style="color: #2d3748; margin: 0 0 10px 0;">Reporte HTML Generado</h2>
+                        <p style="color: #4a5568; margin: 0;">¿Quieres convertirlo a PDF? Es muy fácil:</p>
+                    </div>
                     
-                    // Calcular dimensiones manteniendo aspecto
-                    const imgWidth = contentWidth * 0.8; // 80% del ancho disponible
-                    const imgHeight = (chart.canvas.height / chart.canvas.width) * imgWidth;
+                    <div style="background: #f7fafc; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <ol style="margin: 0; padding-left: 20px; color: #2d3748; line-height: 1.8;">
+                            <li><strong>Abre el archivo HTML</strong> que se descargó</li>
+                            <li><strong>Presiona Ctrl+P</strong> (o Cmd+P en Mac)</li>
+                            <li><strong>Selecciona "Guardar como PDF"</strong></li>
+                            <li><strong>Ajusta márgenes</strong> a "Mínimo"</li>
+                            <li><strong>Guarda tu PDF</strong> profesional</li>
+                        </ol>
+                    </div>
                     
-                    // Agregar imagen al PDF
-                    const xPos = margin + (contentWidth - imgWidth) / 2; // Centrar
-                    pdf.addImage(imgData, 'PNG', xPos, yPos, imgWidth, imgHeight);
-                    yPos += imgHeight + 15;
-
-                } catch (error) {
-                    console.error('Error adding chart to PDF:', error);
-                    pdf.setFontSize(10);
-                    pdf.setTextColor(255, 0, 0);
-                    pdf.text('Error al cargar gráfico', margin, yPos);
-                    yPos += 10;
-                }
-            }
-        }
-
-        async function addCorrelationsToPDF(pdf, pageWidth, pageHeight, margin) {
-            const numericColumns = analysisData.columns.filter(col => dataTypes[col] === 'numeric');
-            if (numericColumns.length < 2) return;
-
-            pdf.addPage();
-            let yPos = 20;
+                    <div style="background: linear-gradient(135deg, #48bb78, #38a169); color: white; 
+                               padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                        <strong>Resultado: PDF de calidad profesional con todos los gráficos</strong>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button onclick="this.parentElement.parentElement.parentElement.remove()"
+                               style="background: #667eea; color: white; border: none; padding: 12px 24px;
+                                      border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;
+                                      transition: all 0.3s ease;">
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            `;
             
-            pdf.setFontSize(16);
-            pdf.setTextColor(45, 55, 72);
-            pdf.text('🔗 Matriz de Correlaciones', margin, yPos);
-            yPos += 20;
-
-            pdf.setFontSize(10);
-            pdf.setTextColor(0, 0, 0);
-
-            // Crear tabla de correlaciones
-            for (let i = 0; i < numericColumns.length; i++) {
-                for (let j = i + 1; j < numericColumns.length; j++) {
-                    if (yPos > pageHeight - 30) {
-                        pdf.addPage();
-                        yPos = 20;
-                    }
-
-                    const col1 = numericColumns[i];
-                    const col2 = numericColumns[j];
-                    
-                    const values1 = analysisData.filtered.map(row => Number(row[col1])).filter(val => !isNaN(val));
-                    const values2 = analysisData.filtered.map(row => Number(row[col2])).filter(val => !isNaN(val));
-                    const correlation = calculateCorrelation(values1, values2);
-                    
-                    pdf.text(`${col1} ↔ ${col2}: ${correlation.toFixed(3)}`, margin, yPos);
-                    yPos += 6;
-                }
-            }
-        }
-
-        async function addQualityDataToPDF(pdf, pageWidth, pageHeight, margin) {
-            pdf.addPage();
-            let yPos = 20;
+            document.body.appendChild(modal);
             
-            pdf.setFontSize(16);
-            pdf.setTextColor(45, 55, 72);
-            pdf.text('🔍 Análisis de Calidad de Datos', margin, yPos);
-            yPos += 20;
-
-            pdf.setFontSize(10);
-            pdf.setTextColor(0, 0, 0);
-
-            analysisData.columns.forEach(column => {
-                if (yPos > pageHeight - 40) {
-                    pdf.addPage();
-                    yPos = 20;
+            // Cerrar al hacer clic fuera del modal
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
                 }
-
-                const totalRows = analysisData.filtered.length;
-                const values = analysisData.filtered.map(row => row[column]);
-                const nullValues = values.filter(val => val === null || val === undefined || val === '').length;
-                const validValues = totalRows - nullValues;
-                const uniqueValues = new Set(values.filter(val => val !== null && val !== undefined && val !== '')).size;
-
-                pdf.setFont(undefined, 'bold');
-                pdf.text(column, margin, yPos);
-                yPos += 8;
-                
-                pdf.setFont(undefined, 'normal');
-                pdf.text(`• Valores válidos: ${validValues} (${(validValues/totalRows*100).toFixed(1)}%)`, margin + 5, yPos);
-                yPos += 5;
-                pdf.text(`• Valores faltantes: ${nullValues} (${(nullValues/totalRows*100).toFixed(1)}%)`, margin + 5, yPos);
-                yPos += 5;
-                pdf.text(`• Valores únicos: ${uniqueValues}`, margin + 5, yPos);
-                yPos += 10;
             });
         }
 
@@ -3210,28 +2222,7 @@
             };
         }
 
-        function generateHTMLReportContent(config, forPrint = false) {
-            const quality = parseFloat(document.getElementById('imageQuality').value);
-            const printStyles = forPrint ? `
-                @media screen {
-                    body { background: white; }
-                    .print-instructions {
-                        background: #e6fffa; border: 2px solid #38b2ac; color: #234e52;
-                        padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;
-                        font-weight: bold; page-break-inside: avoid;
-                    }
-                }
-                @media print {
-                    body { margin: 15mm; font-size: 11pt; }
-                    .print-instructions { display: none; }
-                    .section { page-break-inside: avoid; margin-bottom: 15mm; }
-                    .chart-container { page-break-inside: avoid; margin: 10mm 0; }
-                    .header { page-break-after: avoid; }
-                    .stats-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-                    .stat-card { break-inside: avoid; }
-                }
-            ` : '';
-            
+        function generateHTMLReportContent(config) {
             let html = `
                 <!DOCTYPE html>
                 <html lang="es">
@@ -3254,22 +2245,22 @@
                         .correlation-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
                         .correlation-table th, .correlation-table td { padding: 8px 12px; text-align: center; border: 1px solid #e2e8f0; font-size: 0.9em; }
                         .correlation-table th { background: #f7fafc; }
-                        ${printStyles}
+                        
+                        @media print {
+                            body { margin: 15mm; font-size: 11pt; }
+                            .section { page-break-inside: avoid; margin-bottom: 15mm; }
+                            .chart-container { page-break-inside: avoid; margin: 10mm 0; }
+                            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+                        }
                     </style>
                 </head>
                 <body>
-                    ${forPrint ? `
-                        <div class="print-instructions">
-                            <strong>📋 Instrucciones:</strong> Este reporte está optimizado para impresión.<br>
-                            Presiona <kbd>Ctrl+P</kbd> (o <kbd>Cmd+P</kbd> en Mac) y selecciona "Guardar como PDF" para convertirlo.
-                        </div>
-                    ` : ''}
                     <div class="header">
                         <h1>${config.title}</h1>
                         <div class="meta">
                             <p><strong>Autor:</strong> ${config.author}</p>
                             <p><strong>Fecha:</strong> ${config.date}</p>
-                            <p><strong>Dataset:</strong> ${csvFileInput.files[0]?.name || 'Datos analizados'}</p>
+                            <p><strong>Dataset:</strong> ${DOM.csvFileInput.files[0]?.name || 'Datos analizados'}</p>
                         </div>
                     </div>
             `;
@@ -3284,12 +2275,12 @@
             }
             
             if (config.includeVisualizations || config.includeCustomCharts) {
-                html += '<div class="section"><h2>📊 Visualizaciones</h2>';
+                html += '<div class="section"><h2>Visualizaciones</h2>';
                 
                 if (config.includeVisualizations) {
                     document.querySelectorAll('canvas[id^="chart-"]').forEach(canvas => {
                         const title = getChartTitle(canvas);
-                        const imageData = canvas.toDataURL('image/png', quality);
+                        const imageData = canvas.toDataURL('image/png', 1.0);
                         html += `
                             <div class="chart-container">
                                 <h3>${title}</h3>
@@ -3302,7 +2293,7 @@
                 if (config.includeCustomCharts) {
                     document.querySelectorAll('canvas[id^="custom-chart-"]').forEach(canvas => {
                         const title = getChartTitle(canvas);
-                        const imageData = canvas.toDataURL('image/png', quality);
+                        const imageData = canvas.toDataURL('image/png', 1.0);
                         html += `
                             <div class="chart-container">
                                 <h3>${title}</h3>
@@ -3326,7 +2317,7 @@
             html += `
                     <div class="section" style="margin-top: 50px; text-align: center; color: #666; font-size: 0.9em;">
                         <p>Reporte generado por Analizador EDA - ${new Date().toLocaleString('es-ES')}</p>
-                        ${forPrint ? '<p style="margin-top: 10px;"><em>Optimizado para impresión y conversión a PDF</em></p>' : ''}
+                        <p style="margin-top: 10px;"><em>Para convertir a PDF: Ctrl+P → Guardar como PDF</em></p>
                     </div>
                 </body>
                 </html>
@@ -3339,10 +2330,7 @@
             const contentElement = document.getElementById(contentId);
             if (!contentElement) return '';
             
-            // Clonar el contenido y limpiarlo para el reporte
             const clonedContent = contentElement.cloneNode(true);
-            
-            // Remover elementos no deseados
             clonedContent.querySelectorAll('.loading, button, .delete-chart-button').forEach(el => el.remove());
             
             return `
@@ -3352,6 +2340,9 @@
                 </div>
             `;
         }
+
+        // Función global para eliminar gráficos personalizados (necesaria para onclick)
+        window.deleteCustomChart = deleteCustomChart;
     </script>
 </body>
-</html>
+</html> 
